@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Smart Employee Task Manager</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; font-family: "Poppins", sans-serif; }
+
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #6366f1, #9333ea);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: 0.4s;
+    }
+
+    body.dark {
+      background: linear-gradient(135deg, #111827, #1f2933);
+    }
+
+    .app {
+      width: 1250px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 22px;
+      padding: 30px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.3);
+      transition: 0.4s;
+    }
+
+    body.dark .app {
+      background: #111827;
+      color: white;
+    }
+
+    h1 {
+      text-align: center;
+      color: #4f46e5;
+      font-size: 32px;
+      margin-bottom: 20px;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .toggle {
+      padding: 8px 18px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4,1fr);
+      gap: 15px;
+      margin: 20px 0;
+    }
+
+    .stat {
+      padding: 15px;
+      background: linear-gradient(135deg, #6366f1, #9333ea);
+      color: white;
+      text-align: center;
+      border-radius: 14px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.15);
+    }
+
+    body.dark .card {
+      background: #1f2933;
+    }
+
+    h3 { margin-bottom: 10px; }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+    }
+
+    button {
+      margin-top: 12px;
+      padding: 12px;
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    ul { padding: 0; list-style: none; max-height: 250px; overflow-y: auto; }
+
+    li {
+      background: #f9fafb;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    body.dark li { background: #374151; }
+
+    .danger {
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+      color: white;
+      border-radius: 8px;
+      padding: 6px 12px;
+      border: none;
+    }
+
+    .badge {
+      padding: 6px 14px;
+      border-radius: 18px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .low { background: #22c55e; }
+    .medium { background: #f59e0b; }
+    .high { background: #ef4444; }
+
+    .tasks-card, .chart-card { grid-column: span 3; }
+  </style>
+</head>
+
+<body>
+
+<div class="app">
+  <div class="top-bar">
+    <h1>🚀 Smart Employee & Task Manager</h1>
+    <button class="toggle" onclick="toggleTheme()">🌙 Toggle Mode</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat">👥 Employees<br><span id="empCount">0</span></div>
+    <div class="stat">📌 Tasks<br><span id="taskCount">0</span></div>
+    <div class="stat">🔥 High Priority<br><span id="highCount">0</span></div>
+    <div class="stat">✅ Completed<br>Live</div>
+  </div>
+
+  <div class="grid">
+
+    <div class="card">
+      <h3>➕ Add Employee</h3>
+      <input id="name" placeholder="Name">
+      <input id="role" placeholder="Role">
+      <button onclick="addEmployee()">Add</button>
+    </div>
+
+    <div class="card">
+      <h3>👤 Employees</h3>
+      <ul id="employees"></ul>
+    </div>
+
+    <div class="card">
+      <h3>📝 Assign Task</h3>
+      <input id="taskTitle" placeholder="Task Title">
+      <select id="employeeSelect"></select>
+      <select id="priority">
+        <option value="low">Low</option>
+        <option value="medium">Medium</option>
+        <option value="high">High</option>
+      </select>
+      <button onclick="addTask()">Assign</button>
+    </div>
+
+    <div class="card tasks-card">
+      <h3>✅ Tasks</h3>
+      <ul id="tasks"></ul>
+    </div>
+
+    <div class="card chart-card">
+      <canvas id="taskChart"></canvas>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let chart;
+
+function toggleTheme() {
+  document.body.classList.toggle("dark");
+}
+
+function addEmployee() {
+  const name = document.getElementById("name").value;
+  const role = document.getElementById("role").value;
+
+  fetch("http://localhost:3000/employees", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, role })
+  }).then(loadEmployees);
+}
+
+function loadEmployees() {
+  fetch("http://localhost:3000/employees")
+    .then(res => res.json())
+    .then(data => {
+      const list = document.getElementById("employees");
+      const select = document.getElementById("employeeSelect");
+      list.innerHTML = "";
+      select.innerHTML = "";
+      document.getElementById("empCount").textContent = data.length;
+
+      data.forEach(emp => {
+        list.innerHTML += `<li>${emp.name} (${emp.role})
+        <button class="danger" onclick="deleteEmployee(${emp.id})">X</button></li>`;
+        select.innerHTML += `<option value="${emp.id}">${emp.name}</option>`;
+      });
+    });
+}
+
+function deleteEmployee(id) {
+  fetch(`http://localhost:3000/employees/${id}`, { method: "DELETE" }).then(loadEmployees);
+}
+
+function addTask() {
+  const title = document.getElementById("taskTitle").value;
+  const emp = document.getElementById("employeeSelect").value;
+  const priority = document.getElementById("priority").value;
+
+  fetch("http://localhost:3000/tasks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, employee_id: emp, priority })
+  }).then(loadTasks);
+}
+
+function loadTasks() {
+  fetch("http://localhost:3000/tasks")
+    .then(res => res.json())
+    .then(data => {
+      const list = document.getElementById("tasks");
+      list.innerHTML = "";
+      document.getElementById("taskCount").textContent = data.length;
+
+      let low=0, med=0, high=0;
+
+      data.forEach(task => {
+        if(task.priority==="low") low++;
+        if(task.priority==="medium") med++;
+        if(task.priority==="high") high++;
+
+        list.innerHTML += `
+        <li>
+          ${task.title} → ${task.employee_name}
+          <span class="badge ${task.priority}">${task.priority}</span>
+          <button class="danger" onclick="deleteTask(${task.id})">X</button>
+        </li>`;
+      });
+
+      document.getElementById("highCount").textContent = high;
+      renderChart(low,med,high);
+    });
+}
+
+function deleteTask(id) {
+  fetch(`http://localhost:3000/tasks/${id}`, { method: "DELETE" }).then(loadTasks);
+}
+
+function renderChart(low,med,high) {
+  if(chart) chart.destroy();
+
+  const ctx = document.getElementById("taskChart");
+  chart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Low","Medium","High"],
+      datasets: [{
+        data: [low,med,high],
+        backgroundColor: ["#22c55e","#f59e0b","#ef4444"]
+      }]
+    }
+  });
+}
+
+loadEmployees();
+loadTasks();
+</script>
+
+</body>
+</html>
