@@ -10,8 +10,22 @@ app.use(bodyParser.json());
 const db = new sqlite3.Database("./database.db");
 
 db.serialize(() => {
-  db.run("CREATE TABLE IF NOT EXISTS employees (id INTEGER PRIMARY KEY, name TEXT, role TEXT)");
-  db.run("CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, title TEXT, employee_id INTEGER)");
+  db.run(`
+    CREATE TABLE IF NOT EXISTS employees (
+      id INTEGER PRIMARY KEY,
+      name TEXT,
+      role TEXT
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS tasks (
+      id INTEGER PRIMARY KEY,
+      title TEXT,
+      priority TEXT,
+      employee_id INTEGER
+    )
+  `);
 });
 
 /* ========== EMPLOYEE CRUD ========== */
@@ -37,21 +51,32 @@ app.delete("/employees/:id", (req, res) => {
   res.send("Employee Deleted");
 });
 
-/* ========== TASK CRUD + JOIN ========== */
+/* ========== TASK CRUD + PRIORITY + JOIN ========== */
 
 app.get("/tasks", (req, res) => {
-  db.all(`
-    SELECT tasks.id, tasks.title, employees.name AS employee_name
+  db.all(
+    `
+    SELECT 
+      tasks.id, 
+      tasks.title, 
+      tasks.priority, 
+      employees.name AS employee_name
     FROM tasks
     LEFT JOIN employees ON tasks.employee_id = employees.id
   `,
-  [],
-  (err, rows) => res.json(rows));
+    [],
+    (err, rows) => res.json(rows)
+  );
 });
 
 app.post("/tasks", (req, res) => {
-  const { title, employee_id } = req.body;
-  db.run("INSERT INTO tasks (title, employee_id) VALUES (?, ?)", [title, employee_id]);
+  const { title, priority, employee_id } = req.body;
+
+  db.run(
+    "INSERT INTO tasks (title, priority, employee_id) VALUES (?, ?, ?)",
+    [title, priority, employee_id]
+  );
+
   res.send("Task Added");
 });
 
