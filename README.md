@@ -53,4 +53,4 @@ This project demonstrates **real-world CRUD operations, REST API integration, da
 
 ### 1️⃣ Clone the Repository
 ```bash
-git clone <your-github-repo-link>
+git clone https://github.com/M-Jahnavi-4/prou-fullstack-assignment
